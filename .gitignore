@@ -1,0 +1,39 @@
+# Segredos e chaves privadas
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env.ufma.example
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+android/private/
+
+# Dados, backups e relatórios locais
+data/*
+!data/.gitkeep
+backups/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.log
+
+# Cache e ambiente Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+.vscode/
+.idea/
+
+# APK assinado distribuído no servidor, não no Git
+releases/*.apk
+releases/*.aab
+releases/*.sha256
