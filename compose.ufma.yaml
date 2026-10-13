@@ -1,0 +1,72 @@
+name: ecosensemonitor
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ecosense
+      POSTGRES_USER: ecosense
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no .env}
+      TZ: UTC
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecosense -d ecosense"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+    security_opt: [no-new-privileges:true]
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db: {condition: service_healthy}
+    env_file: .env
+    environment:
+      ENVIRONMENT: production
+      SECURE_COOKIES: "true"
+      PUBLIC_BASE_URL: https://${DOMAIN:?Configure DOMAIN no .env}
+      DATABASE_URL: postgresql://ecosense:${POSTGRES_PASSWORD}@db:5432/ecosense
+      DISABLE_BACKGROUND_SYNC: ${DISABLE_BACKGROUND_SYNC:-false}
+    volumes:
+      - ./releases:/app/releases:ro
+      - app_data:/app/data
+    expose: ["8000"]
+    healthcheck:
+      test: ["CMD","python","-c","import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 8s
+      start_period: 45s
+      retries: 3
+    networks: [internal]
+    security_opt: [no-new-privileges:true]
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      web: {condition: service_healthy}
+    environment:
+      DOMAIN: ${DOMAIN:?Configure DOMAIN no .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [internal]
+    security_opt: [no-new-privileges:true]
+
+networks:
+  internal:
+volumes:
+  postgres_data:
+  app_data:
+  caddy_data:
+  caddy_config:
